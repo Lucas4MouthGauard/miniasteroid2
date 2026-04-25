@@ -28,14 +28,6 @@ import { sqliteDatabasePath } from "@/lib/runtime-config";
 type AddressRow = {
   address: string;
   quoteDraft: string;
-  donationVerified: number;
-  donationCheckedAt: number | null;
-  donationTxHash: `0x${string}` | null;
-  donationTotalWei: string | null;
-  claimStatus: AddressQuestState["claim"]["status"] | null;
-  claimTxHash: `0x${string}` | null;
-  claimErrorMessage: string | null;
-  claimUpdatedAt: number | null;
   quizPassed: number;
   blessingText: string;
   blessingScore: number | null;
@@ -115,45 +107,8 @@ function now() {
   return Date.now();
 }
 
-function ensureColumn(db: Database.Database, table: string, column: string, definition: string) {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as {
-    name: string;
-  }[];
-
-  if (!columns.some((item) => item.name === column)) {
-    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${definition}`).run();
-  }
-}
-
-function ensureAddressStateColumns(db: Database.Database) {
-  ensureColumn(
-    db,
-    "address_states",
-    "donationVerified",
-    "donationVerified INTEGER NOT NULL DEFAULT 0"
-  );
-  ensureColumn(db, "address_states", "donationCheckedAt", "donationCheckedAt INTEGER");
-  ensureColumn(db, "address_states", "donationTxHash", "donationTxHash TEXT");
-  ensureColumn(
-    db,
-    "address_states",
-    "donationTotalWei",
-    "donationTotalWei TEXT NOT NULL DEFAULT '0'"
-  );
-  ensureColumn(
-    db,
-    "address_states",
-    "claimStatus",
-    "claimStatus TEXT NOT NULL DEFAULT 'idle'"
-  );
-  ensureColumn(db, "address_states", "claimTxHash", "claimTxHash TEXT");
-  ensureColumn(db, "address_states", "claimErrorMessage", "claimErrorMessage TEXT");
-  ensureColumn(db, "address_states", "claimUpdatedAt", "claimUpdatedAt INTEGER");
-}
-
 function getDb() {
   if (globalThis.__miniAsteroidDb) {
-    ensureAddressStateColumns(globalThis.__miniAsteroidDb);
     return globalThis.__miniAsteroidDb;
   }
 
@@ -170,14 +125,6 @@ function getDb() {
     CREATE TABLE IF NOT EXISTS address_states (
       address TEXT PRIMARY KEY,
       quoteDraft TEXT NOT NULL,
-      donationVerified INTEGER NOT NULL DEFAULT 0,
-      donationCheckedAt INTEGER,
-      donationTxHash TEXT,
-      donationTotalWei TEXT NOT NULL DEFAULT '0',
-      claimStatus TEXT NOT NULL DEFAULT 'idle',
-      claimTxHash TEXT,
-      claimErrorMessage TEXT,
-      claimUpdatedAt INTEGER,
       quizPassed INTEGER NOT NULL DEFAULT 0,
       blessingText TEXT NOT NULL DEFAULT '',
       blessingScore INTEGER,
@@ -237,8 +184,6 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS token_distributions_address_idx
       ON token_distributions (address, createdAt DESC);
   `);
-
-  ensureAddressStateColumns(db);
 
   db.prepare(
     "INSERT INTO global_state (id, minted, updatedAt) VALUES (1, 0, ?) ON CONFLICT(id) DO NOTHING"
@@ -354,14 +299,6 @@ function mapAddressState(address: string): AddressQuestState {
         SELECT
           address,
           quoteDraft,
-          donationVerified,
-          donationCheckedAt,
-          donationTxHash,
-          donationTotalWei,
-          claimStatus,
-          claimTxHash,
-          claimErrorMessage,
-          claimUpdatedAt,
           quizPassed,
           blessingText,
           blessingScore,
@@ -414,18 +351,6 @@ function mapAddressState(address: string): AddressQuestState {
 
   return {
     social,
-    donation: {
-      checkedAt: row?.donationCheckedAt ?? null,
-      verified: Boolean(row?.donationVerified),
-      txHash: row?.donationTxHash ?? null,
-      totalWei: row?.donationTotalWei ?? "0",
-    },
-    claim: {
-      status: row?.claimStatus ?? "idle",
-      txHash: row?.claimTxHash ?? null,
-      errorMessage: row?.claimErrorMessage ?? null,
-      updatedAt: row?.claimUpdatedAt ?? null,
-    },
     quoteDraft: row?.quoteDraft || DEFAULT_QUOTE_COPY,
     quizAnswers,
     quizPassed: Boolean(row?.quizPassed),
@@ -542,15 +467,7 @@ export function getPendingTokenDistributions(addressInput: string) {
           createdAt,
           updatedAt
         FROM token_distributions
-        WHERE
-          address = ?
-          AND status IN ('pending', 'failed')
-          AND EXISTS (
-            SELECT 1
-            FROM mint_payments
-            WHERE mint_payments.txHash = token_distributions.sourceId
-              AND mint_payments.address = token_distributions.address
-          )
+        WHERE address = ? AND status IN ('pending', 'failed')
         ORDER BY createdAt ASC
       `
     )
@@ -729,156 +646,6 @@ export function verifySocialTask(addressInput: string, taskId: SocialTaskId) {
       address
     );
   })();
-
-  return getSnapshot(address);
-}
-
-export function recordDonationVerification(
-  addressInput: string,
-  result: {
-    verified: boolean;
-    txHash: `0x${string}` | null;
-    totalWei: string;
-  }
-) {
-  const address = ensureAddress(addressInput);
-  const timestamp = now();
-
-  getDb()
-    .prepare(
-      `
-        UPDATE address_states
-        SET
-          donationVerified = ?,
-          donationCheckedAt = ?,
-          donationTxHash = ?,
-          donationTotalWei = ?,
-          updatedAt = ?
-        WHERE address = ?
-      `
-    )
-    .run(
-      result.verified ? 1 : 0,
-      timestamp,
-      result.txHash,
-      result.totalWei,
-      timestamp,
-      address
-    );
-
-  return getSnapshot(address);
-}
-
-export function isAirdropEligible(state: AddressQuestState) {
-  return (
-    state.donation.verified &&
-    state.social.follow.verified &&
-    state.social.quote.verified
-  );
-}
-
-export function startAirdropClaim(addressInput: string) {
-  const address = ensureAddress(addressInput);
-  const db = getDb();
-
-  db.transaction(() => {
-    const state = mapAddressState(address);
-
-    if (!isAirdropEligible(state)) {
-      throw new Error("Complete the donation check and both X tasks first.");
-    }
-
-    if (state.claim.status === "confirmed") {
-      throw new Error("This wallet has already claimed.");
-    }
-
-    if (state.claim.status === "submitting" || state.claim.status === "submitted") {
-      throw new Error("A claim transaction is already in progress.");
-    }
-
-    db.prepare(
-      `
-        UPDATE address_states
-        SET
-          claimStatus = 'submitting',
-          claimErrorMessage = NULL,
-          claimUpdatedAt = ?,
-          updatedAt = ?
-        WHERE address = ?
-      `
-    ).run(now(), now(), address);
-  })();
-
-  return getSnapshot(address);
-}
-
-export function markAirdropClaimSubmitted(
-  addressInput: string,
-  txHash: `0x${string}`
-) {
-  const address = ensureAddress(addressInput);
-  const timestamp = now();
-
-  getDb()
-    .prepare(
-      `
-        UPDATE address_states
-        SET
-          claimStatus = 'submitted',
-          claimTxHash = ?,
-          claimErrorMessage = NULL,
-          claimUpdatedAt = ?,
-          updatedAt = ?
-        WHERE address = ?
-      `
-    )
-    .run(txHash, timestamp, timestamp, address);
-
-  return getSnapshot(address);
-}
-
-export function markAirdropClaimConfirmed(
-  addressInput: string,
-  txHash: `0x${string}`
-) {
-  const address = ensureAddress(addressInput);
-  const timestamp = now();
-
-  getDb()
-    .prepare(
-      `
-        UPDATE address_states
-        SET
-          claimStatus = 'confirmed',
-          claimTxHash = ?,
-          claimErrorMessage = NULL,
-          claimUpdatedAt = ?,
-          updatedAt = ?
-        WHERE address = ?
-      `
-    )
-    .run(txHash, timestamp, timestamp, address);
-
-  return getSnapshot(address);
-}
-
-export function markAirdropClaimFailed(addressInput: string, errorMessage: string) {
-  const address = ensureAddress(addressInput);
-  const timestamp = now();
-
-  getDb()
-    .prepare(
-      `
-        UPDATE address_states
-        SET
-          claimStatus = 'failed',
-          claimErrorMessage = ?,
-          claimUpdatedAt = ?,
-          updatedAt = ?
-        WHERE address = ?
-      `
-    )
-    .run(errorMessage, timestamp, timestamp, address);
 
   return getSnapshot(address);
 }

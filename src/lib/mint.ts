@@ -17,20 +17,6 @@ export type SocialTaskProgress = {
   verified: boolean;
 };
 
-export type DonationTransferState = {
-  checkedAt: number | null;
-  verified: boolean;
-  txHash: `0x${string}` | null;
-  totalWei: string;
-};
-
-export type ClaimState = {
-  status: "idle" | "submitting" | "submitted" | "confirmed" | "failed";
-  txHash: `0x${string}` | null;
-  errorMessage: string | null;
-  updatedAt: number | null;
-};
-
 export type BlessingResult = {
   score: number;
   passed: boolean;
@@ -40,8 +26,6 @@ export type BlessingResult = {
 
 export type AddressQuestState = {
   social: Record<"follow" | "quote", SocialTaskProgress>;
-  donation: DonationTransferState;
-  claim: ClaimState;
   quoteDraft: string;
   quizAnswers: Record<number, QuizChoice | null>;
   quizPassed: boolean;
@@ -58,18 +42,6 @@ export const EMPTY_ADDRESS_STATE = (quoteDraft: string): AddressQuestState => ({
   social: {
     follow: { launchedAt: null, verified: false },
     quote: { launchedAt: null, verified: false },
-  },
-  donation: {
-    checkedAt: null,
-    verified: false,
-    txHash: null,
-    totalWei: "0",
-  },
-  claim: {
-    status: "idle",
-    txHash: null,
-    errorMessage: null,
-    updatedAt: null,
   },
   quoteDraft,
   quizAnswers: Object.fromEntries(

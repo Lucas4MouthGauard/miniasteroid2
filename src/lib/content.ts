@@ -32,25 +32,22 @@ export type MintBundle = {
 export const X_HANDLE = "base_asteroid";
 export const X_PROFILE_URL = "https://x.com/base_asteroid";
 export const X_POST_URL =
-  "https://x.com/base_asteroid/status/2047979111944257699?s=20";
-export const DONATION_RECIPIENT =
-  "0x0fCa5194baA59a362a835031d9C4A25970effE68";
-export const CLAIM_REWARD_TOKENS = 30_000;
+  "https://x.com/base_asteroid/status/2047638958646190096?s=20";
 
 export const SOCIAL_TASKS: SocialTaskDefinition[] = [
   {
     id: "follow",
-    label: "X-1",
-    title: "Follow on X",
-    description: "Open the X profile. The verify button unlocks after 3 seconds.",
+    label: "Task 1A",
+    title: "Follow the official X account",
+    description: "Come back and claim 1 quota after completion.",
     reward: 1,
     href: X_PROFILE_URL,
   },
   {
     id: "quote",
-    label: "X-2",
-    title: "Repost the campaign post",
-    description: "Open the X post. The verify button unlocks after 3 seconds.",
+    label: "Task 1B",
+    title: "Repost the official X post",
+    description: "Open the post, repost it, then come back for 1 quota.",
     reward: 1,
     href: X_POST_URL,
   },

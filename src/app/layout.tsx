@@ -1,31 +1,19 @@
 import type { Metadata } from "next";
 import "@rainbow-me/rainbowkit/styles.css";
-import { Calistoga, Inter, JetBrains_Mono } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 
-const inter = Inter({
-  variable: "--font-inter",
+const roboto = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const calistoga = Calistoga({
-  variable: "--font-calistoga",
-  subsets: ["latin"],
-  weight: "400",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "AAVE Donation Claim",
+  title: "Asteroid",
   description:
-    "Donation eligibility, X task checks, and one-time token claim.",
+    "Asteroid quest board with mint quota tracking, Base mint payments, and automatic token delivery.",
 };
 
 export default function RootLayout({
@@ -34,10 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${calistoga.variable} ${jetbrainsMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${roboto.variable} h-full antialiased`}>
       <head>
         <link rel="preload" as="image" href="/space-bg.jpg" fetchPriority="high" />
         <link rel="preload" as="image" href="/mini-asteroid-logo.png" />

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { PropsWithChildren, useState } from "react";
-import { RainbowKitProvider, lightTheme, type AvatarComponent } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, midnightTheme, type AvatarComponent } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "@/lib/wagmi";
@@ -38,15 +38,15 @@ export function AppProviders({ children }: PropsWithChildren) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           appInfo={{
-            appName: "AAVE Donation Claim",
+            appName: "Asteroid",
             learnMoreUrl: "https://x.com/base_asteroid",
           }}
           avatar={MascotAvatar}
           modalSize="compact"
           showRecentTransactions={false}
-          theme={lightTheme({
-            accentColor: "#0052FF",
-            accentColorForeground: "#FFFFFF",
+          theme={midnightTheme({
+            accentColor: "#c8b9ff",
+            accentColorForeground: "#1b1630",
             borderRadius: "large",
             fontStack: "system",
             overlayBlur: "small",
