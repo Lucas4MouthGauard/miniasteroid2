@@ -1,0 +1,7 @@
+# Dedicated local env file for deploying the Asteroid ERC20 contract.
+# Copy this file to .envcopy and fill in real values. Do not commit .envcopy.
+
+BASE_RPC_URL=https://mainnet.base.org
+PRIVATE_KEY=your_deployer_private_key
+DEV_WALLET=0xYourDevWalletAddress
+ETHERSCAN_API_KEY=your_etherscan_or_basescan_api_key
