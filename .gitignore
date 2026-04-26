@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results
 
 # next.js
 /.next/
@@ -32,6 +33,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+*.swp
+
+# local runtime data
+/.data
+
+# hardhat generated files
+/artifacts
+/cache
 
 # vercel
 .vercel
